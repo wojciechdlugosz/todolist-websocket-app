@@ -10,26 +10,40 @@ const App = () => {
 
   useEffect(() => {
     const socket = io("ws://localhost:8000", { transports: ["websocket"] });
+
     setSocket(socket);
+
+    // listeners 
+    socket.on('addTask', (newTask) => addTask(newTask));
+    socket.on('removeTask', id => removeTask(id));
+    socket.on('updateData', (updatedTasks) => updateTasks(updatedTasks));
+
     return () => {
       socket.disconnect();
     };
   }, []);
 
-  const removeTask = (id) => {
+  const removeTask = (id, emitEvent = false) => {
     setTasks(tasks => tasks.filter(task => task.id !== id));
-    socket.emit('removeTask', id);
+    if (emitEvent) {
+      socket.emit('removeTask', id);
+    }
   };
 
   const submitForm = (e) => {
     e.preventDefault();
-    addTask({ name: taskName, id: uuidv4() });
-    socket.emit('addTask', { name: taskName, id: uuidv4() });
+    const task = { name: taskName, id: uuidv4() };
+    addTask(task);
+    socket.emit('addTask', task);
     setTaskName("");
   };
 
   const addTask = (task) => {
     setTasks(tasks => [...tasks, task]);
+  };
+
+  const updateTasks = (updatedTasks) => {
+    setTasks(tasks => [...tasks, ...updatedTasks]);
   };
 
   return (
@@ -46,7 +60,7 @@ const App = () => {
           {tasks.map(({ id, name }) => (
             <li key={id} className="task">
               {name}{" "}
-              <button onClick={() => removeTask(id)} className="btn btn--red">
+              <button onClick={() => removeTask(id, true)} className="btn btn--red">
                 Remove
               </button>
             </li>
